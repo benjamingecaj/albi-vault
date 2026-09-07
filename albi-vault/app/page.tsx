@@ -9,6 +9,20 @@ type Credential = { id:string; brand_id:string; platform:string; login_url:strin
 type Brand = { id:string; name:string; active:boolean }
 type TeamUser = { id:string; email:string; role:'admin'|'viewer'; active:boolean; created_at:string }
 
+const ALLOWED_EMAIL_DOMAINS = [
+  'albigroup.com',
+  'albionline.com',
+  'albifashion.com',
+  'albicommerce.com',
+  'albimarket.com',
+  'albicenter.com',
+]
+
+function isAllowedEmail(email: string) {
+  const normalized = email.trim().toLowerCase()
+  return ALLOWED_EMAIL_DOMAINS.some(domain => normalized.endsWith(`@${domain}`))
+}
+
 export default function Home() {
   const supabase = useMemo(() => createClient(), [])
   const [ready, setReady] = useState(false)
@@ -112,7 +126,7 @@ function Login() {
   async function submit(e:React.FormEvent) {
     e.preventDefault(); setLoading(true); setMessage('')
     try {
-      if (!email.toLowerCase().endsWith('@albigroup.com')) throw new Error('Only @albigroup.com accounts are allowed.')
+      if (!isAllowedEmail(email)) throw new Error('Only approved ALBI company email domains are allowed.')
       const result = mode==='login'
         ? await supabase.auth.signInWithPassword({email,password})
         : await supabase.auth.signUp({email,password})
@@ -122,7 +136,7 @@ function Login() {
     finally{ setLoading(false) }
   }
 
-  return <main className="center-page"><section className="card login-card"><div className="eyebrow">ALBI GROUP</div><h1>Credential Vault</h1><p className="muted">Private access for authorized ALBI Group staff.</p><form onSubmit={submit} className="form"><label>Email<input className="input" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="name@albigroup.com" required /></label><label>Password<input className="input" type="password" value={password} onChange={e=>setPassword(e.target.value)} minLength={8} required /></label>{message&&<div className="notice">{message}</div>}<button className="btn dark" disabled={loading}>{loading?'Please wait…':mode==='login'?'Sign in':'Create first account'}</button></form><button className="linkbtn login-switch" onClick={()=>setMode(mode==='login'?'signup':'login')}>{mode==='login'?'First time? Create an account':'Already have an account? Sign in'}</button><p className="tiny muted">The first @albigroup.com account created becomes the administrator. Later staff accounts are created by the admin.</p></section></main>
+  return <main className="center-page"><section className="card login-card"><div className="eyebrow">ALBI GROUP</div><h1>Credential Vault</h1><p className="muted">Private access for authorized ALBI Group staff.</p><form onSubmit={submit} className="form"><label>Email<input className="input" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="name@albigroup.com" required /></label><label>Password<input className="input" type="password" value={password} onChange={e=>setPassword(e.target.value)} minLength={8} required /></label>{message&&<div className="notice">{message}</div>}<button className="btn dark" disabled={loading}>{loading?'Please wait…':mode==='login'?'Sign in':'Create first account'}</button></form><button className="linkbtn login-switch" onClick={()=>setMode(mode==='login'?'signup':'login')}>{mode==='login'?'First time? Create an account':'Already have an account? Sign in'}</button><p className="tiny muted">The first approved ALBI company account created becomes the administrator. Later staff accounts are created by the admin.</p></section></main>
 }
 
 function AddCredential({brands,onDone}:{brands:Brand[];onDone:()=>void}) {
