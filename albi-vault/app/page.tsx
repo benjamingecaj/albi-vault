@@ -179,7 +179,16 @@ export default function Home() {
   const [query, setQuery] = useState('')
   const [revealed, setRevealed] = useState<Record<string, string>>({})
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [tab, setTab] = useState<'vault' | 'admin' | 'import' | 'users' | 'activity' | 'private'>('vault')
+  const [tab, setTab] = useState<'vault' | 'admin' | 'import' | 'users' | 'activity' | 'private'>(() => typeof window !== 'undefined' && window.location.pathname === '/private-vault' ? 'private' : 'vault')
+  function navigate(next:'vault'|'admin'|'import'|'users'|'activity'|'private') {
+    setTab(next)
+    window.history.pushState({tab:next},'',next==='private'?'/private-vault':'/vault')
+  }
+  useEffect(()=>{
+    const sync=()=>setTab(window.location.pathname==='/private-vault'?'private':'vault')
+    window.addEventListener('popstate',sync)
+    return ()=>window.removeEventListener('popstate',sync)
+  },[])
   const [message, setMessage] = useState('')
 
   async function load() {
@@ -282,12 +291,12 @@ export default function Home() {
           </div>
 
           <nav className="sidebar-nav">
-            <button className={`nav-btn ${tab === 'vault' ? 'active' : ''}`} onClick={() => setTab('vault')}>Vault</button>
+            <button className={`nav-btn ${tab === 'vault' ? 'active' : ''}`} onClick={() => navigate('vault')}>Vault</button>
             {profile.role === 'admin' && (
               <>
                 <button className={`nav-btn ${tab === 'admin' ? 'active' : ''}`} onClick={() => setTab('admin')}>Add credential</button>
                 <button className={`nav-btn ${tab === 'import' ? 'active' : ''}`} onClick={() => setTab('import')}>Import Excel</button>
-                <button className={`nav-btn ${tab === 'private' ? 'active' : ''}`} onClick={() => setTab('private')}>Private Vault</button>
+                <button className={`nav-btn ${tab === 'private' ? 'active' : ''}`} onClick={() => navigate('private')}>Private Vault</button>
                 <button className={`nav-btn ${tab === 'users' ? 'active' : ''}`} onClick={() => setTab('users')}>Users</button>
                 <button
                   className={`nav-btn ${tab === 'activity' ? 'active' : ''}`}
