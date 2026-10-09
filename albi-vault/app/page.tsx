@@ -313,8 +313,8 @@ export default function Home() {
         </div>
       </aside>
 
-      <section className="content-shell">
-        <header className="page-topbar">
+      <section className="content-shell" style={{ gap: 16 }}>
+        <header className="page-topbar" style={{ marginBottom: 12, paddingBottom: 0 }}>
           <div>
             <h1>{tab === 'vault' ? 'Credential Vault' : tab === 'admin' ? 'Add credential' : tab === 'import' ? 'Import Excel' : tab === 'users' ? 'Team users' : 'Activity Log'}</h1>
             <p className="muted">
@@ -607,12 +607,7 @@ function AddCredential({ brands, onDone }: { brands: Brand[]; onDone: () => void
   }
 
   return (
-    <section className="panel">
-      <div className="panel-heading">
-        <h2>Add credential</h2>
-        <p className="muted">Create a new encrypted credential entry.</p>
-      </div>
-
+    <section className="panel" style={{ marginTop: 0, paddingTop: 0 }}>
       <form onSubmit={submit} className="form-card">
         <div className="form-grid two">
           <label>Brand
@@ -878,12 +873,7 @@ function ImportPanel({ onDone }: { onDone: (count: number) => void }) {
   }
 
   return (
-    <section className="panel">
-      <div className="panel-heading">
-        <h2>Import ALBI Excel workbook</h2>
-        <p className="muted">Upload an Excel workbook. Username and Password columns are detected automatically; other fields are optional.</p>
-      </div>
-
+    <section className="panel" style={{ marginTop: 0, paddingTop: 0 }}>
       <div className="form-card">
         <label>Excel workbook
           <input className="field" type="file" accept=".xlsx,.xls" onChange={e => {
@@ -946,12 +936,7 @@ function UsersPanel({ users, onDone }: { users: TeamUser[]; onDone: () => Promis
   }
 
   return (
-    <section className="panel">
-      <div className="panel-heading">
-        <h2>Team access</h2>
-        <p className="muted">Create admin or viewer accounts for your internal team.</p>
-      </div>
-
+    <section className="panel" style={{ marginTop: 0, paddingTop: 0 }}>
       <form className="form-card" onSubmit={submit}>
         <div className="form-grid three">
           <label>Email
