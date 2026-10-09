@@ -179,16 +179,26 @@ export default function Home() {
   const [query, setQuery] = useState('')
   const [revealed, setRevealed] = useState<Record<string, string>>({})
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [tab, setTab] = useState<'vault' | 'admin' | 'import' | 'users' | 'activity' | 'private'>(() => typeof window !== 'undefined' && window.location.pathname === '/private-vault' ? 'private' : 'vault')
-  function navigate(next:'vault'|'admin'|'import'|'users'|'activity'|'private') {
-    setTab(next)
-    window.history.pushState({tab:next},'',next==='private'?'/private-vault':'/vault')
+  type Section = 'vault' | 'admin' | 'import' | 'users' | 'activity' | 'private'
+  const sectionPaths: Record<Section, string> = {
+    vault: '/vault', admin: '/add-credential', import: '/import-excel',
+    users: '/users', activity: '/activity-log', private: '/private-vault'
   }
-  useEffect(()=>{
-    const sync=()=>setTab(window.location.pathname==='/private-vault'?'private':'vault')
-    window.addEventListener('popstate',sync)
-    return ()=>window.removeEventListener('popstate',sync)
-  },[])
+  const sectionFromPath = (path: string): Section =>
+    (Object.keys(sectionPaths) as Section[]).find(key => sectionPaths[key] === path) ?? 'vault'
+  const [tab, setTab] = useState<Section>('vault')
+  function navigate(next: Section) {
+    setTab(next)
+    if (window.location.pathname !== sectionPaths[next]) {
+      window.history.pushState({ tab: next }, '', sectionPaths[next])
+    }
+  }
+  useEffect(() => {
+    const sync = () => setTab(sectionFromPath(window.location.pathname))
+    sync()
+    window.addEventListener('popstate', sync)
+    return () => window.removeEventListener('popstate', sync)
+  }, [])
   const [message, setMessage] = useState('')
 
   async function load() {
@@ -294,14 +304,14 @@ export default function Home() {
             <button className={`nav-btn ${tab === 'vault' ? 'active' : ''}`} onClick={() => navigate('vault')}>Vault</button>
             {profile.role === 'admin' && (
               <>
-                <button className={`nav-btn ${tab === 'admin' ? 'active' : ''}`} onClick={() => setTab('admin')}>Add credential</button>
-                <button className={`nav-btn ${tab === 'import' ? 'active' : ''}`} onClick={() => setTab('import')}>Import Excel</button>
+                <button className={`nav-btn ${tab === 'admin' ? 'active' : ''}`} onClick={() => navigate('admin')}>Add credential</button>
+                <button className={`nav-btn ${tab === 'import' ? 'active' : ''}`} onClick={() => navigate('import')}>Import Excel</button>
                 <button className={`nav-btn ${tab === 'private' ? 'active' : ''}`} onClick={() => navigate('private')}>Private Vault</button>
-                <button className={`nav-btn ${tab === 'users' ? 'active' : ''}`} onClick={() => setTab('users')}>Users</button>
+                <button className={`nav-btn ${tab === 'users' ? 'active' : ''}`} onClick={() => navigate('users')}>Users</button>
                 <button
                   className={`nav-btn ${tab === 'activity' ? 'active' : ''}`}
                   onClick={async () => {
-                    setTab('activity')
+                    navigate('activity')
                     await loadActivity()
                   }}
                 >
@@ -369,7 +379,7 @@ export default function Home() {
             onDone={async () => {
               setMessage('Credential saved successfully.')
               await load()
-              setTab('vault')
+              navigate('vault')
             }}
           />
         )}
@@ -379,7 +389,7 @@ export default function Home() {
             onDone={async imported => {
               setMessage(`Imported ${imported} credentials.`)
               await load()
-              setTab('vault')
+              navigate('vault')
             }}
           />
         )}
