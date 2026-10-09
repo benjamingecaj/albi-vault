@@ -662,6 +662,8 @@ function ImportPanel({ onDone }: { onDone: (count: number) => void }) {
   const [file, setFile] = useState<File | null>(null)
   const [rows, setRows] = useState<ImportRow[]>([])
   const [cardsFound, setCardsFound] = useState(0)
+  const [platformChoice, setPlatformChoice] = useState('Instagram')
+  const [skipped, setSkipped] = useState(0)
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -675,6 +677,7 @@ function ImportPanel({ onDone }: { onDone: (count: number) => void }) {
     setMessage('')
     setRows([])
     setCardsFound(0)
+    setSkipped(0)
 
     try {
       const XLSX = await import('xlsx')
@@ -693,8 +696,72 @@ function ImportPanel({ onDone }: { onDone: (count: number) => void }) {
         return XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false }) as unknown[][]
       }
 
+      // Flexible workbook import: detect headings across all sheets, without requiring ALL.
+      // Retain the existing legacy ALBI workbook mapping below as a fallback.
+      const aliases: Record<string, string[]> = {
+        username: ['username', 'user', 'handle', 'account', 'login', 'instagram username', 'ig username', 'perdoruesi'],
+        password: ['password', 'pass', 'pwd', 'fjalekalimi', 'fjalekalimi', 'account password'],
+        brand: ['brand', 'brand name', 'brend', 'company', 'name'],
+        platform: ['platform', 'network', 'social network'],
+        recovery_email: ['recovery email', 'email', 'e-mail', 'mail'],
+        login_url: ['login url', 'url', 'link'],
+        notes: ['notes', 'note', 'comments', 'info'],
+        has_2fa: ['2fa', 'two factor', '2fa enabled'],
+      }
+      const normalizeHeader = (value: unknown) => cleanCell(value).toLowerCase().replace(/[_-]+/g, ' ').replace(/\\s+/g, ' ').trim()
+      const mappedFlexible: ImportRow[] = []
+      let skippedRows = 0
+      let detectedFlexible = false
+      for (const name of workbook.SheetNames as string[]) {
+        const sheet = sheetRows(name)
+        if (!sheet.length) continue
+        let headerIndex = -1
+        let indices: Record<string, number> = {}
+        for (let i = 0; i < Math.min(sheet.length, 15); i++) {
+          const headers = (sheet[i] || []).map(normalizeHeader)
+          const found: Record<string, number> = {}
+          for (const [field, options] of Object.entries(aliases)) {
+            const index = headers.findIndex(h => options.includes(h))
+            if (index >= 0) found[field] = index
+          }
+          if (found.username !== undefined && (found.password !== undefined || found.recovery_email !== undefined)) {
+            headerIndex = i
+            indices = found
+            break
+          }
+        }
+        if (headerIndex < 0) continue
+        detectedFlexible = true
+        for (const r of sheet.slice(headerIndex + 1)) {
+          if (!r?.some(v => cleanCell(v))) continue
+          const get = (key: string) => indices[key] === undefined ? '' : cleanCell(r[indices[key]])
+          const username = get('username')
+          const password = get('password')
+          if (!username || !usableSecret(password)) { skippedRows++; continue }
+          const platform = platformChoice === 'From Excel' ? (get('platform') || inferPlatform(get('brand'), username)) : platformChoice
+          mappedFlexible.push({
+            brand: get('brand') || username.replace(/^@/, ''),
+            platform,
+            login_url: get('login_url') || (platform === 'Instagram' ? instagramUrl(username) : ''),
+            username,
+            password,
+            recovery_email: get('recovery_email'),
+            has_2fa: is2FAEnabled(get('has_2fa')),
+            notes: get('notes'),
+          })
+        }
+      }
+      if (detectedFlexible) {
+        const unique = new Map<string, ImportRow>()
+        for (const item of mappedFlexible) unique.set(`${item.platform.toLowerCase()}|${item.username.toLowerCase()}`, item)
+        setRows([...unique.values()])
+        setSkipped(skippedRows)
+        setMessage(`${unique.size} credentials ready to import.${skippedRows ? ` ${skippedRows} rows without a username or usable password were skipped.` : ''} Missing optional fields will remain blank.`)
+        return
+      }
+
       const all = sheetRows('ALL')
-      if (all.length < 2) throw new Error('The workbook does not contain the expected ALL sheet.')
+      if (all.length < 2) throw new Error('No recognized Username/Password columns or legacy ALL sheet found.')
 
       const unitByRow = new Map<string, string>()
       for (const unit of UNIT_SHEETS) {
@@ -779,6 +846,7 @@ function ImportPanel({ onDone }: { onDone: (count: number) => void }) {
       const cards = sheetRows('CARDS').slice(1).filter(r => r?.some(v => cleanCell(v)))
       setCardsFound(cards.length)
       setRows(mapped)
+      setSkipped(0)
       setMessage(`Workbook analyzed successfully. ${mapped.length} encrypted credential records are ready to import.${cards.length ? ` ${cards.length} card-reference rows were detected and will be kept separate for the Cards module.` : ''}`)
     } catch (e) {
       setMessage(e instanceof Error ? e.message : 'Could not read workbook.')
@@ -813,7 +881,7 @@ function ImportPanel({ onDone }: { onDone: (count: number) => void }) {
     <section className="panel">
       <div className="panel-heading">
         <h2>Import ALBI Excel workbook</h2>
-        <p className="muted">Upload the INFO workbook and ALBI VAULT will map the existing sheets automatically.</p>
+        <p className="muted">Upload an Excel workbook. Username and Password columns are detected automatically; other fields are optional.</p>
       </div>
 
       <div className="form-card">
@@ -823,6 +891,16 @@ function ImportPanel({ onDone }: { onDone: (count: number) => void }) {
             setRows([])
             setMessage('')
           }} />
+        </label>
+
+        <label>Platform for this import
+          <select className="field" value={platformChoice} onChange={e => { setPlatformChoice(e.target.value); setRows([]); setMessage('') }}>
+            <option value="Instagram">Instagram</option>
+            <option value="Facebook">Facebook</option>
+            <option value="TikTok">TikTok</option>
+            <option value="Email">Email</option>
+            <option value="From Excel">From Excel / automatic</option>
+          </select>
         </label>
 
         <div className="button-row">
@@ -839,7 +917,7 @@ function ImportPanel({ onDone }: { onDone: (count: number) => void }) {
 
         {rows.length > 0 && (
           <div className="inline-note">
-            <strong>Ready:</strong> {rows.length} credential records.
+            <strong>Ready:</strong> {rows.length} credential records. {skipped > 0 && `${skipped} incomplete rows skipped.`}
             {cardsFound > 0 && <> The workbook also contains {cardsFound} card-reference rows; those are intentionally not mixed into the credentials table.</>}
           </div>
         )}
