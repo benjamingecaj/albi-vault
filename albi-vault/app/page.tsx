@@ -313,7 +313,7 @@ export default function Home() {
         </div>
       </aside>
 
-      <section className="content-shell" style={{ gap: 16 }}>
+      <section className="content-shell" style={{ gap: 16, alignContent: "start", gridTemplateRows: "max-content" }}>
         <header className="page-topbar" style={{ marginBottom: 12, paddingBottom: 0 }}>
           <div>
             <h1>{tab === 'vault' ? 'Credential Vault' : tab === 'admin' ? 'Add credential' : tab === 'import' ? 'Import Excel' : tab === 'users' ? 'Team users' : 'Activity Log'}</h1>
@@ -462,7 +462,7 @@ function VaultTable({
   releasePassword: (credential: Credential) => Promise<void>
 }) {
   return (
-    <section className="panel">
+    <section className="panel" style={{ alignContent: "start" }}>
       <div className="toolbar-row">
         <input
           className="field search-field"
@@ -999,7 +999,7 @@ function ActivityPanel({ activities, onRefresh }: { activities: Activity[]; onRe
   })
 
   return (
-    <section className="panel">
+    <section className="panel" style={{ alignContent: "start" }}>
       <div className="toolbar-row">
         <input className="field search-field" placeholder="Search user, brand, platform or action..." value={q} onChange={e => setQ(e.target.value)} />
         <button className="secondary-btn" onClick={onRefresh}>Refresh log</button>
