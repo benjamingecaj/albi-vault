@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { vaultApi } from '@/lib/vault-api'
+import PrivateVault from '@/components/private-vault'
 
 type Profile = { id: string; email: string; role: 'admin' | 'viewer'; active: boolean }
 type Credential = {
@@ -178,7 +179,7 @@ export default function Home() {
   const [query, setQuery] = useState('')
   const [revealed, setRevealed] = useState<Record<string, string>>({})
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [tab, setTab] = useState<'vault' | 'admin' | 'import' | 'users' | 'activity'>('vault')
+  const [tab, setTab] = useState<'vault' | 'admin' | 'import' | 'users' | 'activity' | 'private'>('vault')
   const [message, setMessage] = useState('')
 
   async function load() {
@@ -286,6 +287,7 @@ export default function Home() {
               <>
                 <button className={`nav-btn ${tab === 'admin' ? 'active' : ''}`} onClick={() => setTab('admin')}>Add credential</button>
                 <button className={`nav-btn ${tab === 'import' ? 'active' : ''}`} onClick={() => setTab('import')}>Import Excel</button>
+                <button className={`nav-btn ${tab === 'private' ? 'active' : ''}`} onClick={() => setTab('private')}>Private Vault</button>
                 <button className={`nav-btn ${tab === 'users' ? 'active' : ''}`} onClick={() => setTab('users')}>Users</button>
                 <button
                   className={`nav-btn ${tab === 'activity' ? 'active' : ''}`}
@@ -316,12 +318,13 @@ export default function Home() {
       <section className="content-shell" style={{ gap: 16, alignContent: "start", gridTemplateRows: "max-content" }}>
         <header className="page-topbar" style={{ marginBottom: 12, paddingBottom: 0 }}>
           <div>
-            <h1>{tab === 'vault' ? 'Credential Vault' : tab === 'admin' ? 'Add credential' : tab === 'import' ? 'Import Excel' : tab === 'users' ? 'Team users' : 'Activity Log'}</h1>
+            <h1>{tab === 'vault' ? 'Credential Vault' : tab === 'admin' ? 'Add credential' : tab === 'import' ? 'Import Excel' : tab === 'users' ? 'Team users' : tab === 'private' ? 'Private Vault' : 'Activity Log'}</h1>
             <p className="muted">
               {tab === 'vault' && 'A structured table view for all brand credentials.'}
               {tab === 'admin' && 'Manually add a new credential into the encrypted vault.'}
               {tab === 'import' && 'Upload and map the ALBI Excel workbook.'}
               {tab === 'users' && 'Create and monitor ALBI VAULT user accounts.'}
+              {tab === 'private' && 'Restricted credentials for authorized administrators.'}
               {tab === 'activity' && 'Audit trail for sign-ins, sign-ups, password releases, and admin actions.'}
             </p>
           </div>
@@ -373,6 +376,8 @@ export default function Home() {
         )}
 
         {profile.role === 'admin' && tab === 'users' && <UsersPanel users={users} onDone={load} />}
+
+        {profile.role === 'admin' && tab === 'private' && <PrivateVault />}
 
         {profile.role === 'admin' && tab === 'activity' && <ActivityPanel activities={activities} onRefresh={loadActivity} />}
       </section>
