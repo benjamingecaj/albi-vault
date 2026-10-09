@@ -27,7 +27,7 @@ export default function PrivateVault() {
   async function run(action:()=>Promise<void>) { setBusy(true);setMessage('');try{await action()}catch(e){setMessage(e instanceof Error?e.message:'Request failed')}finally{setBusy(false)} }
   async function refresh(){const result=await rpc('list');setEntries(result.entries||[])}
   async function unlock(){await run(async()=>{if(!passphrase)throw new Error('Enter the private password');await refresh();setUnlocked(true)})}
-  async function setup(){await run(async()=>{if(passphrase.length<16)throw new Error('Use at least 16 characters');await rpc('setup');setConfigured(true);await refresh();setUnlocked(true)})}
+  async function setup(){await run(async()=>{if(passphrase.length<8)throw new Error('Use at least 8 characters');await rpc('setup');setConfigured(true);await refresh();setUnlocked(true)})}
   async function add(){await run(async()=>{await rpc('add',{
     p_service:form.service,p_username:form.username,p_email:form.email,p_password:form.password,
     p_two_factor:form.two_factor,p_notes:form.notes
